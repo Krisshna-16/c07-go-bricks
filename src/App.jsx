@@ -196,6 +196,117 @@ const recommendations = [
   }
 ]
 
+// Chart Error Boundary to catch any Recharts failures at runtime
+class ChartErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Chart Error Boundary caught an error: ", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
+// Fallback high-fidelity SVG/HTML Bar Chart when Recharts crashes
+const CustomBarChart = () => {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  const data = [
+    { name: 'AyurVeda Natural', rate: 2.4, color: '#94A3B8' },
+    { name: 'Crystal Wellness', rate: 3.8, color: '#A855F7' },
+    { name: 'EMF Shield Pro', rate: 4.2, color: '#3B82F6' },
+    { name: 'Shungite Shield (Target)', rate: 5.0, color: '#00FF41' }
+  ];
+
+  const maxVal = 6.0;
+
+  return (
+    <div className="relative w-full h-full flex flex-col justify-end pt-6 select-none font-sans">
+      {/* Chart Plot Area */}
+      <div className="relative flex-1 flex items-end justify-around border-b border-[#2E2E2E] pb-2 pl-12 pr-4 h-[180px]">
+        {/* Y-Axis Grid Lines & Labels */}
+        {[0, 1.5, 3.0, 4.5, 6.0].map((val) => {
+          const bottomPercent = (val / maxVal) * 100;
+          return (
+            <div key={val} className="absolute left-0 right-0 h-px pointer-events-none" style={{ bottom: `${bottomPercent}%` }}>
+              <div className="w-full border-t border-[#2E2E2E]/40 border-dashed"></div>
+              <span className="absolute -left-12 -translate-y-1/2 text-[10px] font-mono text-gray-500 w-10 text-right">
+                {val.toFixed(1)}%
+              </span>
+            </div>
+          );
+        })}
+
+        {/* Bar Columns */}
+        {data.map((item, idx) => {
+          const barHeightPercent = (item.rate / maxVal) * 100;
+          const isHovered = hoveredIndex === idx;
+
+          return (
+            <div
+              key={idx}
+              className="flex flex-col items-center z-10 group cursor-pointer relative"
+              style={{ width: '20%', maxWidth: '70px' }}
+              onMouseEnter={(e) => {
+                setHoveredIndex(idx);
+                // Compute tooltip position relative to the chart container
+                const rect = e.currentTarget.getBoundingClientRect();
+                const parentRect = e.currentTarget.parentElement.getBoundingClientRect();
+                setTooltipPos({
+                  x: (rect.left - parentRect.left) + (rect.width / 2),
+                  y: (rect.top - parentRect.top) - 10
+                });
+              }}
+              onMouseLeave={() => setHoveredIndex(null)}
+            >
+              {/* Bar Fill */}
+              <div className="w-full bg-[#1A1A1A] border border-[#2E2E2E] hover:border-gray-500 rounded-t-md relative overflow-hidden transition-all duration-300 h-[150px]">
+                <div
+                  className="absolute bottom-0 left-0 right-0 rounded-t-md transition-all duration-500"
+                  style={{
+                    height: `${barHeightPercent}%`,
+                    backgroundColor: item.color,
+                    boxShadow: isHovered ? `0 0 15px ${item.color}60` : 'none'
+                  }}
+                />
+              </div>
+
+              {/* X-Axis Label */}
+              <span className="text-[10px] text-gray-400 font-mono mt-2 text-center truncate w-full" title={item.name}>
+                {item.name}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Floating Tooltip */}
+      {hoveredIndex !== null && (
+        <div
+          className="absolute bg-[#1A1A1A] border border-[#2E2E2E] text-white rounded-lg p-2.5 shadow-2xl text-xs font-sans transition-all duration-150 pointer-events-none z-50 -translate-x-1/2 -translate-y-full"
+          style={{ left: `${tooltipPos.x}px`, top: `${tooltipPos.y}px` }}
+        >
+          <div className="font-mono text-[9px] text-gray-500 uppercase">{data[hoveredIndex].name}</div>
+          <div className="mt-1 font-bold text-[#00FF41]">{data[hoveredIndex].rate}% Engagement</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState('overview')
   const [searchTerm, setSearchTerm] = useState('')
@@ -675,49 +786,51 @@ function App() {
                     </div>
 
                     <div className="h-64 mt-6">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={chartData}
-                          margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#2E2E2E" vertical={false} />
-                          <XAxis
-                            dataKey="name"
-                            stroke="#6B7280"
-                            fontSize={10}
-                            tickLine={false}
-                            axisLine={false}
-                          />
-                          <YAxis
-                            stroke="#6B7280"
-                            fontSize={10}
-                            tickLine={false}
-                            axisLine={false}
-                            tickFormatter={(val) => `${val}%`}
-                          />
-                          <Tooltip
-                            cursor={{ fill: '#2E2E2E', opacity: 0.3 }}
-                            contentStyle={{
-                              backgroundColor: '#1A1A1A',
-                              borderColor: '#2E2E2E',
-                              borderRadius: '8px',
-                              color: '#fff',
-                              fontSize: '12px',
-                              fontFamily: 'Inter, sans-serif'
-                            }}
-                            formatter={(value) => [`${value}%`, 'Engagement Rate']}
-                          />
-                          <Bar
-                            dataKey="rate"
-                            radius={[6, 6, 0, 0]}
-                            maxBarSize={45}
+                      <ChartErrorBoundary fallback={<CustomBarChart />}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={chartData}
+                            margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
                           >
-                            {chartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#2E2E2E" vertical={false} />
+                            <XAxis
+                              dataKey="name"
+                              stroke="#6B7280"
+                              fontSize={10}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              stroke="#6B7280"
+                              fontSize={10}
+                              tickLine={false}
+                              axisLine={false}
+                              tickFormatter={(val) => `${val}%`}
+                            />
+                            <Tooltip
+                              cursor={{ fill: '#2E2E2E', opacity: 0.3 }}
+                              contentStyle={{
+                                backgroundColor: '#1A1A1A',
+                                borderColor: '#2E2E2E',
+                                borderRadius: '8px',
+                                color: '#fff',
+                                fontSize: '12px',
+                                fontFamily: 'Inter, sans-serif'
+                              }}
+                              formatter={(value) => [`${value}%`, 'Engagement Rate']}
+                            />
+                            <Bar
+                              dataKey="rate"
+                              radius={[6, 6, 0, 0]}
+                              maxBarSize={45}
+                            >
+                              {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </ChartErrorBoundary>
                     </div>
                   </div>
 
