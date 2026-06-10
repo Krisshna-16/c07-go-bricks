@@ -912,11 +912,11 @@ function App() {
                     <div className="bg-[#0A0A0A] border border-[#2E2E2E] p-3 rounded-lg grid grid-cols-2 gap-2 text-center font-mono">
                       <div className="border-r border-[#2E2E2E]">
                         <span className="text-[10px] text-gray-500 block">EST. ENGAGEMENT</span>
-                        <span className="text-lg font-bold text-[#00FF41] mt-0.5 block">{simResults.engagement}%</span>
+                        <span className="text-lg font-bold text-[#00FF41] mt-0.5 block">{simulatedResults.engagement}%</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-gray-500 block">OPPORTUNITY SCORE</span>
-                        <span className="text-lg font-bold text-white mt-0.5 block">{simResults.opportunity}/10</span>
+                        <span className="text-lg font-bold text-white mt-0.5 block">{simulatedResults.opportunity}/10</span>
                       </div>
                     </div>
                   </div>
